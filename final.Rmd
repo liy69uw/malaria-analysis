@@ -1,0 +1,141 @@
+---
+title: "529final"
+author: "Yiyang Li"
+date: "6/6/2021"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(survey)
+library(ade4)
+```
+
+```{r}
+#extract rows
+clean.ind <- which(GHHR82FL$HV014>0)
+hr.clean <- GHHR82FL[clean.ind,]
+FLclean <- data.frame(row.names = c(1:N))
+N <- length(clean.ind)
+
+FLclean$HHID <- rep(0, N) 
+FLclean$HHID <- hr.clean$HHID
+FLclean$HV001 <- hr.clean$HV001
+FLclean$HV002 <- hr.clean$HV002
+FLclean$HV023 <- hr.clean$HV023
+FLclean$HV025 <- hr.clean$HV025
+FLclean$HV206 <- hr.clean$HV206
+FLclean$HV225 <- hr.clean$HV225
+
+FLclean$HV225[is.na(FLclean$HV225)] <- 0
+
+FLclean$HV253 <- hr.clean$HV253
+```
+```{r}
+for(i in 1:N){
+  t <- hr.clean$HV253[i]
+  if (t == 1){FLclean$HV253[i] <- 1}
+  else{FLclean$HV253[i] <- 0}
+}
+```
+```{r}
+# MBN and ITN counts
+FLclean$MBN <- hr.clean$HML1
+FLclean$ITN <- rep(0, N)
+```
+```{r}
+for(i in 1:N){
+  t <- sum(hr.clean[i, 901:907], na.rm = T)
+  FLclean$ITN[i] <- t
+}
+```
+```{r}
+FLclean$HV014 <- hr.clean$HV014 # children counts
+#malaria counts
+FLclean$HML35 <- rep(0,N)
+FLclean$HML32 <- rep(0,N)
+```
+```{r}
+for(i in 1:N){
+  t35 <- length(which(hr.clean[i, 1950:1987] == 1))
+  t32 <- length(which(hr.clean[i, 1570:1607] == 1))
+  FLclean$HML35[i] <- t35
+  FLclean$HML32[i] <- t32
+}
+#calculate household prevalence
+FLclean$HHMP < -rep(0,N)
+for(i in 1:N){
+  p <- 1/2 * FLclean$HML32[i]/FLclean$HV014[i]  + 1/2 * FLclean$HML35[i]/FLclean$HV014[i]
+  FLclean$HHMP[i] <- p
+}
+FLclean$HV005 <- hr.clean$HV005 / 100000
+```
+
+```{r}
+#two stage cluster design
+library(survey)
+FLclus2 <- svydesign(id = ~HV001 + HV002, weights = ~HV005, data = FLclean)
+```
+```{r}
+svymean(~HHMP, FLclus2, na.rm=T)
+```
+```{r}
+svyby(~HHMP, ~HV025, svymean, FLclus2)
+```
+```{r}
+reg.mbn <- svyglm(HHMP ~ MBN, FLclus2)
+reg.mbn
+sqrt(diag(vcov(reg.mbn)))
+```
+```{r}
+reg.itn <- svyglm(HHMP ~ ITN, FLclus2)
+reg.itn
+sqrt(diag(vcov(reg.itn)))
+```
+```{r}
+reg.mbn.ratio <- svyglm(HHMP ~ MBN - 1 , FLclus2)
+reg.mbn.ratio
+sqrt(diag(vcov(reg.mbn.ratio)))
+```
+```{r}
+reg.itn.ratio <- svyglm(HHMP ~ ITN - 1, FLclus2)
+reg.itn.ratio
+sqrt(diag(vcov(reg.itn.ratio)))
+```
+```{r}
+plot(FLclean$MBN, FLclean$HHMP, type = "b")
+```
+```{r}
+plot(FLclean$HV253, FLclean$HHMP, type = "b")
+```
+
+```{r}
+reg.rural <- svyglm(HHMP ~ HV025, FLclus2)
+reg.rural
+sqrt(diag(vcov(reg.rural)))
+```
+```{r}
+reg.rural.ratio <- svyglm(HHMP ~ HV025 - 1, FLclus2)
+reg.rural.ratio
+sqrt(diag(vcov(reg.rural.ratio)))
+```
+```{r}
+reg.spray <- svyglm(HHMP ~ as.factor(HV253), FLclus2)
+reg.spray
+sqrt(diag(vcov(reg.spray)))
+```
+```{r}
+reg.elec <- svyglm(HHMP ~ as.factor(HV206), FLclus2)
+reg.elec
+sqrt(diag(vcov(reg.elec)))
+```
+
+```{r}
+reg.toilet <- svyglm(HHMP ~ as.factor(HV225), FLclus2)
+reg.toilet
+sqrt(diag(vcov(reg.toilet)))
+```
+

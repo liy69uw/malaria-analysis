@@ -1,0 +1,133 @@
+\documentclass[11pt]{article}
+\usepackage{setspace}
+\usepackage[utf8]{inputenc}
+\usepackage{siunitx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{listings}
+
+\title{An Analysis on DHS Malaria Household Survey Data in Ghana 2019}
+\author{Yiyang Li}
+\date{June 2021}
+
+\usepackage{natbib}
+\usepackage{graphicx}
+\doublespacing
+\begin{document}
+
+\maketitle
+
+\section{The Survey and Data}
+
+\subsection{Research Question}
+
+Malaria is a serious illness caused by a parasite transmitted by a mosquito bite. The 2019 Ghana Malaria Indicator Survey aim to provide estimates for key malaria indicators. The whole survey contains four main questionnaires: household, women's, biomarker and fieldworker. This analysis will focus on results from the household survey questionnaires, recoded by DHS, aiming to estimate the prevalence of malaria in under-5 children in the household level, and explore the association between household children malaria prevalence and household health and living environment covariates.   \\
+Sleeping under a mosquito bet net (MBN) could help prevent mosquito bites, while sleeping under a insecticide-treated net (ITN) could probably help more. In the household questionnaire, for each household, the number of MBNs is recorded and whether each MBN is an ITN is recorded. There are three other covariates that we want to explore whether they are associated with the malaria prevalence: whether the household is sprayed against mosquitoes in the past twelve months, has electricity and share toilets with other households. These covariates could be seen as indicators for healthy living environment and social-economic status. 
+
+\subsection{Sample Design}
+
+The sample is chosen from a stratified two-stage cluster sampling process. Ghana has 10 regions, each divided into a urban area and a rural area, making it 20 strata in total. The sampling frame is a complete list from the Ghana 2010 Population and Housing Census (PHC), and each element in the list is a enumeration area (EA),the smallest geographic area that can be easily canvassed by an enumerator during an enumeration exercise. For each EA, the list has its location, type of residence, the estimated number of the residential households and the estimated population. The PSU is an EA from this sampling frame.  \\
+The first stage is that in each stratum (either urban or rural), samples of EAs are selected independently with the probability proportional to the EA size. For some large EAs, before the first stage selection, they are divided into segments and one segment will be selected to represent this EA in the second stage. The probability of a segment in a large EA being selected is proportional to its size. As a result, a cluster in the survey is either an EA or a segment of EA. \\
+The second stage is that within each selected EA, the list of households serves as the sampling frame and 30 households are selected from computer-assisted enumeration. The sample unit is a household from a selected PSU.  \\
+In this survey, 200 clusters (97 urban, 103 rural) are selected in the first stage and 30 households are selected in each cluster in the second stage, making a total sample size of 6,000 in the plan. \\
+Because sample households selected in one stratum is independent from households of other stratum, and some households may not be occupied or responding, we need weights to adjust our estimates and regressions. Sampling weights for each household (HV005) are directly provided in the DHS data. PHC details are not available for us so we are going to utilize this weight in the following analysis.
+
+\paragraph{Response Rate} The actual total number of households selected for this survey is 6,002, among which 5,833 are occupied and 5,799 complete the survey. The total response rate reaches $99\% (=\frac{5799}{5833})$. 
+
+\section{Methods}
+
+\subsection{Data Processing}
+Since malaria tests are only performed for children elder than 5 month and younger than 5 years (6-59 month when using month to count the age), households with 1 child or more children are extracted at the first step. According to the DHS data, number of children in a household in the sample has the distribution showed in Table 1.
+\begin{table}[h]
+\centering
+ \begin{tabular}{c | c c c c c c c c c c} 
+ Number of children & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 11 \\ 
+ \hline
+ Household count & 3278 & 1510 & 763 & 181 & 39 & 18 & 5 & 3 & 1 & 1
+\end{tabular}
+\caption{Household counts for number of children in the household}
+\label{tab:abc}
+\end{table}
+From this table, around $43.47\% (=\frac{2521}{5799})$ of households has at least one child, and $17.43\%(\frac{1011}{5799})$ of households has at least two children. In this case, each household will be assigned a variable called "household level malaria prevalence" (HHMP) computed in this way:
+\begin{align*}
+    HHMP &= \frac{Number\ of\ children\ with\ positive\  malaria\ test\  results}{Number\ of\ children\ in\ the\ household}
+\end{align*}
+There are two tests used for detecting malaria: rapid diagnostic test (RDT) and testing with blood smears in the laboratory. Two tests are encoded differently and may yield different results for the same child. After the data was extracted, two kinds of prevalence are computed using results of these tests, then the average will be taken and recorded to be the HHMP for this household.  \\
+The number of MBNs will is extracted directly from the DHS data, called "HV227". This number is self-reported by the interviewee in the household and might not match the interviewer's observation. In other words, we are open to the risk that some MBNs are broken or lost, not serving the household as expected. We choose to use this count instead of the interviewer-observed count because "whether an MBN is an ITN" is also household-reported, and we want to make these counts consistent, not having a household owing more ITNs than MBNs.  \\
+Whether the household has electricity (HV206) or share toilet with other households (HV225) are binary, 1 for yes and 0 for no. Whether the household has been sprayed against mosquitoes in the past 12 months (HV253) has "don't know" responses that will be counted as "not sprayed" in our cleaned data.  \\
+For the design-based analysis, the household case ID (HHID), cluster nubmer (HV001), household number (HV002), household sample weight (HV005, 6 decimals) sample strata (HV022) and type of strata (HV025) are extracted as well.  \\
+The resulted data set for our analysis will have 2521 rows (records) and key columns (covarites) as listed in Table 2.
+\begin{table}[h]
+\centering
+\small
+ \begin{tabular}{c c || c c} 
+ Covariate Name & Meaning &  Covariate Name & Meaning\\ 
+ \hline
+ HHID & Case ID & HHMP & Household Malaria prevalence \\
+ HV001 & PSU ID & HV002 & SSU ID \\
+ HV023 & Strata ID & HV025 & Urban(1)/Rural(2) \\
+ MBN & MBN count & ITN & ITN count \\
+ HV206 & Has electricity(1) & HV225 & Shared toilets(1) \\
+ HV253 & Sprayed(1) & &
+\end{tabular}
+\caption{Main covariates in the cleaned data set}
+\label{tab:abc}
+\end{table}
+
+\subsection{Survey Design and Functions Used}
+
+The cleaned data still has the original two-stage cluster structure. The cluster number (HV001) is the PSU ID and the household number (HV002) is the SSU ID. Notice that we only know the PSU and SSU IDs but not where exactly they locate. \\
+Functions to be used are $svymean()$ and $svyglm()$ from the $svrvey$ package. Since the prevalence of malaria in each household is a numeric value between 0 and 1, the logistic regression will not be used. The number of MBNs and ITNs are numeric. Living environment covariates (sprayed against mosquitoes, electricity and shared toilets) will be treated as factors.   
+
+\section{Results}
+
+\subsection{Malaria Prevalence and Bed Net Counts}
+
+\begin{table}[h]
+\centering
+\small
+ \begin{tabular}{c | c c c} 
+ Covariate Name & Est. Intercept & Est. Slope & SE \\ 
+ \hline
+ MBN & $0.119435$ & $0.004275$ & $0.003728$ \\
+ MBN & Not included & $0.03726^{*}$ & $0.00333$ \\
+ ITN & $0.119026$ & $0.004463$ & $0.003724$ \\
+ ITN & Not included & $0.03735^{*}$ & $0.003337$ \\
+\end{tabular}
+\caption{Regression results: malaria prevalence ~ bed nets count, {*} means statistically significant}
+\label{tab:abc}
+\end{table}
+
+The estimated prevalence of malaria in a household using the two-stage cluster structure is $12.943\%$, with SE to be $0.0108$. The regression estimates using number of bed nets (MBN and ITN) as covariates are shown in Table 3. According to these results, bet net counts seems to not have statistically significant association with the prevalence of malaria in households. On the other hand, since the survey regression without intercept can be seen as the ratio estimate, bet net counts seems to be helpful in the estimation for malaria prevalence. Based on regressions without intercept, children in households with more bet nets seem to have a lower chance of suffering from malaria. This conclusion works only for estimation, not prediction or association. In other words, based on our analysis above, we cannot suggest the government or organizations to distribute more bed nets in order to protect children under 5 from malaria.   
+
+\subsection{Malaria Prevalence and Living Environment}
+
+\begin{table}[h]
+\centering
+\small
+ \begin{tabular}{c | c c c} 
+ Covariate Name & Est. Intercept & Est. Slope & SE \\ 
+ \hline
+ Sprayed Home & $0.13044$ & $-0.01144$^{*} & $0.001992$ \\
+ Has Electricity & $0.2346$ & $-0.1304$^{*} & $0.02134$ \\
+ Shared Toilet & $0.14170$ & $-0.02021$ & $0.01754$ \\
+\end{tabular}
+\caption{Regression results: malaria prevalence ~ living environment factor, {*} means statistically significant}
+\label{tab:abc}
+\end{table}
+
+According to Table 4, children in households that are sprayed against mosquitoes in the past 12 months or does not have electricity connected are less likely to suffer malaria. The first part of the conclusion fits our expectation but the second part does not. The discussion section will address on this. Sharing toilets with other households does not seem to relate to the malaria prevalence. From these results, we could possibly suggest that spraying more residence might help with a lower chance of children in the household getting malaria. 
+
+\section{Discussion}
+
+The correspondence of cluster number and exact geographic region is not clear merely from the DHS data we can obtain. That of strata and region is not clear either. In reasons of "not using a bet net last night", "too hot to use" appears many times. It is possible that the net usage is related to the weather or climate thus related to the cluster divided based on location. \\
+From the above analysis, it seems numbers of bed nets could help in estimate the malaria prevalence but not associated with the prevalence at a statistically significant level. This result is honestly out of our expectation. Other than HHMP, maybe we can match household data with children test data and explore potential associations between the possibility of having malaria for a child and numbers of bed nets in the household. In this case, we will need to adjust weights, since we only have weights for the household, and consider logistic regressions when estimating the prevalence. \\
+It seems having electricity is associated with higher chance of children getting malaria in the household. If access to the electricity is related to higher social-economic status then this result is against what the report by DHS describes. According to DHS, malaria prevalence is lower in households with more wealth. The electricity covariate could also be related to the geographic cluster location thus be associated with the malaria prevalence indirectly, taking location as a mediating variable. 
+
+\section*{Reference}
+
+1. Ghana Statistical Service-GSS, National Malaria Control Programme-NMCP, National Public Health Reference Laboratory-NPHRL, and ICF. 2020. Ghana Malaria Indicator Survey 2019. Accra, Ghana, and Rockville, Maryland, USA: GSS/ICF. \\ Available at https://www.dhsprogram.com/pubs/pdf/MIS35/MIS35.pdf. \\
+2. DHS data set for Ghana: MIS, 2019 accessed from the DHS official website. 
+
+\end{document}
